@@ -1,109 +1,136 @@
 import streamlit as st
 import pandas as pd
+import hashlib
 
-# Page Configuration
-st.set_page_config(page_title="Room Booking App", layout="wide")
+# --- 1. PAGE CONFIGURATION ---
+st.set_page_config(page_title="OYO Clone | Book Rooms Fast", layout="wide", initial_sidebar_state="expanded")
 
-# 1. FIXED: Corrected the parameter name to 'unsafe_allow_html'
+# --- 2. CUSTOM CSS FOR OYO LOOK & FEEL ---
 st.markdown("""
     <style>
+    .main { background-color: #f8f9fa; }
+    .stButton>button { width: 100%; border-radius: 8px; font-weight: bold; }
     .property-card {
         border: 1px solid #e0e0e0;
         border-radius: 12px;
         padding: 20px;
-        margin-bottom: 25px;
-        background-color: #ffffff;
-        box-shadow: 2px 2px 10px rgba(0,0,0,0.05);
+        margin-bottom: 20px;
+        background-color: white;
+        transition: 0.3s;
     }
-    .price-tag {
-        color: #d32f2f;
-        font-size: 24px;
-        font-weight: bold;
-    }
+    .price-tag { color: #d32f2f; font-size: 24px; font-weight: bold; }
     .rating-badge {
         background-color: #388e3c;
         color: white;
-        padding: 4px 10px;
-        border-radius: 6px;
+        padding: 4px 8px;
+        border-radius: 5px;
         font-size: 14px;
-        font-weight: bold;
     }
-    .location-text {
-        color: #616161;
-        font-size: 14px;
+    .promo-banner {
+        background: linear-gradient(90deg, #ff416c, #ff4b2b);
+        color: white;
+        padding: 10px;
+        border-radius: 8px;
+        text-align: center;
+        font-weight: bold;
+        margin-bottom: 20px;
     }
     </style>
     """, unsafe_allow_html=True)
 
-# --- Sidebar Filters ---
-st.sidebar.header("🔍 Search Filters")
-price_range = st.sidebar.slider("Price per night (₹)", 500, 10000, (1000, 5000))
-prop_filter = st.sidebar.multiselect("Property Type", ["Townhouse", "Flagship", "Home", "Silver Key"], default=["Townhouse"])
+# --- 3. AUTHENTICATION & SESSION LOGIC ---
+if "logged_in" not in st.session_state:
+    st.session_state.logged_in = False
+if "user_role" not in st.session_state:
+    st.session_state.user_role = "Guest"
 
-# --- Main Content ---
-st.title("Found 2 Properties in Gurgaon")
+def check_login(email, password):
+    # Simple Hash for security
+    hashed_pw = hashlib.sha256(password.encode()).hexdigest()
+    # Mock Data: password is 'admin123'
+    if email == "admin@oyo.com" and hashed_pw == hashlib.sha256("admin123".encode()).hexdigest():
+        st.session_state.logged_in = True
+        st.session_state.user_role = "Guest"
+        return True
+    return False
 
-# Mock Data for Display
+# --- 4. SIDEBAR: AUTH & FILTERS ---
+with st.sidebar:
+    st.image("https://upload.wikimedia.org/wikipedia/commons/1/19/OYO_Rooms_Logo.svg", width=100)
+    
+    if not st.session_state.logged_in:
+        st.subheader("🔑 Login to Book")
+        email = st.text_input("Email", placeholder="admin@oyo.com")
+        pw = st.text_input("Password", type="password", placeholder="admin123")
+        if st.button("Login"):
+            if check_login(email, pw):
+                st.success("Logged in!")
+                st.rerun()
+            else:
+                st.error("Invalid credentials")
+        st.info("Tip: Use admin@oyo.com / admin123")
+    else:
+        st.subheader(f"👋 Welcome, {st.session_state.user_role}")
+        if st.button("Logout"):
+            st.session_state.logged_in = False
+            st.rerun()
+        
+        st.divider()
+        st.subheader("🔍 Filters")
+        price_range = st.sidebar.slider("Price (₹)", 500, 5000, (1000, 3000))
+        room_type = st.sidebar.multiselect("Room Type", ["Townhouse", "Flagship", "Silver Key"], default=["Townhouse"])
+
+# --- 5. MAIN CONTENT ---
+if not st.session_state.logged_in:
+    st.markdown("## 🏨 Welcome to the OYO Clone")
+    st.image("https://images.unsplash.com/photo-1542314831-068cd1dbfeeb?auto=format&fit=crop&w=1200&q=80")
+    st.warning("Please login from the sidebar to search for hotels and make a booking.")
+    st.stop()
+
+# Banner for logged-in users
+st.markdown('<div class="promo-banner">🎉 50% OFF on your first booking with OYO Welcome!</div>', unsafe_allow_html=True)
+
+# Mock Hotel Data
 properties = [
-    {
-        "id": 1,
-        "name": "Super OYO Townhouse 124 Sector 45",
-        "location": "Sector 45, Near Huda City Centre, Gurgaon",
-        "price": 1499,
-        "old_price": 3200,
-        "rating": 4.3,
-        "lat": 28.4595,
-        "lon": 77.0266,
-        "img": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400"
-    },
-    {
-        "id": 2,
-        "name": "OYO Flagship 83445 Premium",
-        "location": "DLF Phase 3, Cyber City, Gurgaon",
-        "price": 999,
-        "old_price": 2500,
-        "rating": 4.1,
-        "lat": 28.4900,
-        "lon": 77.0800,
-        "img": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400"
-    }
+    {"id": 1, "name": "Super OYO Townhouse 124", "loc": "Sector 45, Gurgaon", "price": 1499, "old": 3200, "rate": 4.3, "lat": 28.4595, "lon": 77.0266, "img": "https://images.unsplash.com/photo-1566073771259-6a8506099945?w=400"},
+    {"id": 2, "name": "OYO Flagship 83445 Premium", "loc": "DLF Phase 3, Gurgaon", "price": 999, "old": 2500, "rate": 4.1, "lat": 28.4900, "lon": 77.0800, "img": "https://images.unsplash.com/photo-1582719478250-c89cae4dc85b?w=400"},
+    {"id": 3, "name": "Silver Key Executive Stays", "loc": "Golf Course Rd, Gurgaon", "price": 2499, "old": 5000, "rate": 4.7, "lat": 28.4400, "lon": 77.0900, "img": "https://images.unsplash.com/photo-1520250497591-112f2f40a3f4?w=400"}
 ]
 
-# Layout: 2/3 for listings, 1/3 for map
-left_col, right_col = st.columns([1.5, 1])
+# Filtering Logic
+filtered_props = [p for p in properties if price_range[0] <= p["price"] <= price_range[1]]
 
-with left_col:
-    for prop in properties:
-        # Check if property matches filters (Simplified logic)
-        if price_range[0] <= prop["price"] <= price_range[1]:
-            with st.container():
-                # Using columns inside the container to mimic the 'card' look
-                img_col, info_col = st.columns([1, 2])
-                
-                with img_col:
-                    st.image(prop["img"], use_container_width=True)
-                
-                with info_col:
-                    st.markdown(f"### {prop['name']}")
-                    st.markdown(f"<p class='location-text'>📍 {prop['location']}</p>", unsafe_allow_html=True)
-                    st.markdown(f"<span class='rating-badge'>{prop['rating']} ★</span>", unsafe_allow_html=True)
-                    
-                    st.markdown(f"""
-                        <div style="margin: 15px 0;">
-                            <span class="price-tag">₹{prop['price']}</span>
-                            <span style="text-decoration: line-through; color: #9e9e9e; margin-left: 10px;">₹{prop['old_price']}</span>
-                            <span style="color: #ff9800; font-weight: bold; margin-left: 10px;">{int((1 - prop['price']/prop['old_price'])*100)}% OFF</span>
-                        </div>
-                    """, unsafe_allow_html=True)
-                    
-                    if st.button(f"View Details & Book", key=f"btn_{prop['id']}"):
-                        st.balloons()
-                        st.info(f"Opening booking page for {prop['name']}...")
-                
-                st.divider()
+# Display Layout
+col_list, col_map = st.columns([1.5, 1])
 
-with right_col:
+with col_list:
+    st.subheader(f"Showing {len(filtered_props)} properties")
+    for prop in filtered_props:
+        with st.container():
+            c1, c2 = st.columns([1, 2])
+            with c1:
+                st.image(prop["img"], use_container_width=True)
+            with c2:
+                st.markdown(f"### {prop['name']}")
+                st.caption(f"📍 {prop['loc']}")
+                st.markdown(f"<span class='rating-badge'>{prop['rate']} ★</span>", unsafe_allow_html=True)
+                
+                st.markdown(f"""
+                    <div style="margin-top:10px;">
+                        <span class="price-tag">₹{prop['price']}</span>
+                        <span style="text-decoration: line-through; color: gray; margin-left: 10px;">₹{prop['old']}</span>
+                    </div>
+                """, unsafe_allow_html=True)
+                
+                if st.button(f"Book Now", key=f"book_{prop['id']}"):
+                    st.success(f"✅ Booking initiated for {prop['name']}!")
+                    st.balloons()
+            st.divider()
+
+with col_map:
     st.subheader("Map View")
-    # Convert list to DataFrame for st.map
-    df = pd.DataFrame(properties)
-    st.map(df[['lat', 'lon']])
+    if filtered_props:
+        df = pd.DataFrame(filtered_props)
+        st.map(df[['lat', 'lon']])
+    else:
+        st.write("No properties found in this price range.")
